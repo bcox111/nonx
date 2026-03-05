@@ -2,12 +2,17 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
     <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
         #map {
             position: absolute;
             top: 0;
@@ -15,6 +20,17 @@
             left: 0;
             right: 0;
         }
+        /* Remove blue tap flash on mobile */
+        * { -webkit-tap-highlight-color: transparent; }
+        /* Eliminate 300ms tap delay on controls */
+        .leaflet-control { touch-action: manipulation; }
+        /* Ensure controls respect iPhone notch / safe areas */
+        .leaflet-top { padding-top: env(safe-area-inset-top, 0); }
+        .leaflet-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+        .leaflet-left { padding-left: env(safe-area-inset-left, 0); }
+        .leaflet-right { padding-right: env(safe-area-inset-right, 0); }
+
+        /* --- Desktop controls --- */
         .padus-control {
             background: white;
             padding: 6px 8px;
@@ -49,41 +65,177 @@
             border: 1px solid #666;
             opacity: 0.85;
         }
+
+        /* --- Locate (Find Me) button --- */
+        .locate-btn {
+            background: white;
+            border: none;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            min-width: 44px;
+            min-height: 44px;
+            font-size: 20px;
+            padding: 0;
+        }
+        .locate-btn:hover { background: #f4f4f4; }
+        .locate-btn:active { background: #e8e8e8; }
+
+        /* --- Mobile bottom sheet --- */
+        .layers-fab {
+            display: none; /* shown via media query */
+            position: fixed;
+            bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            border: none;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            cursor: pointer;
+            font: bold 13px/1 Arial, sans-serif;
+            padding: 10px 14px;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+        .bottom-sheet {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+            background: white;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+            padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+            max-height: 60vh;
+            overflow-y: auto;
+            font: 14px/1.6 Arial, sans-serif;
+        }
+        .bottom-sheet.open { display: block; }
+        .bottom-sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .bottom-sheet-header b { font-size: 15px; }
+        .bottom-sheet-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 22px;
+            line-height: 1;
+            padding: 4px 8px;
+            min-width: 44px;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+        .bottom-sheet select {
+            width: 100%;
+            font-size: 16px; /* prevents iOS auto-zoom */
+            padding: 8px;
+            margin-bottom: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .sheet-legend i {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            vertical-align: middle;
+            border: 1px solid #666;
+            opacity: 0.85;
+        }
+        .sheet-legend b { display: block; margin-bottom: 4px; font-size: 13px; color: #555; }
+        /* Dim overlay behind sheet */
+        .sheet-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1999;
+            background: rgba(0,0,0,0.35);
+        }
+        .sheet-backdrop.open { display: block; }
+
+        /* --- Mobile overrides --- */
+        @media (max-width: 768px) {
+            /* Hide desktop PADUS controls on mobile */
+            .padus-control,
+            .padus-legend { display: none !important; }
+            /* Show FAB */
+            .layers-fab { display: flex; align-items: center; gap: 6px; }
+            /* Larger leaflet control buttons */
+            .leaflet-control-zoom a,
+            .leaflet-control-layers-toggle {
+                width: 44px !important;
+                height: 44px !important;
+                line-height: 44px !important;
+                font-size: 20px !important;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+
+    <!-- Mobile: floating layers button + bottom sheet -->
+    <button class="layers-fab" id="layersFab">
+        <span>&#9776;</span> Layers
+    </button>
+    <div class="sheet-backdrop" id="sheetBackdrop"></div>
+    <div class="bottom-sheet" id="bottomSheet">
+        <div class="bottom-sheet-header">
+            <b>PAD-US Layer</b>
+            <button class="bottom-sheet-close" id="sheetClose">&#215;</button>
+        </div>
+        <select id="sheetSelect"></select>
+        <div class="sheet-legend" id="sheetLegend"></div>
+    </div>
+
     <script>
-        var map = L.map('map').setView([46.0187, -91.47588], 4);
+        var map = L.map('map', {
+            tap: true,
+            tapTolerance: 15,
+            bounceAtZoomLimits: false
+        }).setView([46.0187, -91.47588], 4);
 
-        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+        var TILE_OPTS = { keepBuffer: 2, updateWhenZooming: false };
 
-        var cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', Object.assign({
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            detectRetina: true
+        }, TILE_OPTS)).addTo(map);
+
+        var cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', Object.assign({
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
             subdomains: 'abcd'
-        });
+        }, TILE_OPTS));
 
-        var cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        var cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', Object.assign({
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
             subdomains: 'abcd'
-        });
+        }, TILE_OPTS));
 
-        var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', Object.assign({
             attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-        });
+        }, TILE_OPTS));
 
-        var esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        var esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', Object.assign({
             attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
-        });
+        }, TILE_OPTS));
 
-        var openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        var openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', Object.assign({
             attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
             maxZoom: 17
-        });
-
-        var marker = L.marker([46.0187, -91.475880]).addTo(map);
+        }, TILE_OPTS));
 
         var ZOOM_MIN = 7;    // show PADUS starting here
         var ZOOM_COUNTY = 10; // show all features (including small) at county level
@@ -263,7 +415,7 @@
                     }
                 });
                 return rows.join('<br>') || 'No information available';
-            });
+            }, { maxWidth: 280 });
             return layer;
         }
 
@@ -368,6 +520,94 @@
         new PadusControl({ position: 'topright' }).addTo(map);
 
         updatePadusLayer();
+
+        // --- GPS "Find Me" control ---
+        var locateMarker = null;
+        var locateCircle = null;
+
+        L.Control.Locate = L.Control.extend({
+            onAdd: function() {
+                var btn = L.DomUtil.create('button', 'locate-btn');
+                btn.title = 'Find my location';
+                btn.innerHTML = '&#8982;';
+                btn.setAttribute('aria-label', 'Find my location');
+                L.DomEvent.disableClickPropagation(btn);
+                L.DomEvent.on(btn, 'click', function() {
+                    if (!navigator.geolocation) {
+                        alert('Geolocation is not supported by your browser.');
+                        return;
+                    }
+                    btn.style.opacity = '0.5';
+                    navigator.geolocation.getCurrentPosition(
+                        function(pos) {
+                            btn.style.opacity = '1';
+                            var lat = pos.coords.latitude;
+                            var lng = pos.coords.longitude;
+                            var acc = pos.coords.accuracy;
+                            if (locateMarker) map.removeLayer(locateMarker);
+                            if (locateCircle) map.removeLayer(locateCircle);
+                            locateCircle = L.circle([lat, lng], { radius: acc, color: '#1a73e8', weight: 1, fillOpacity: 0.1 }).addTo(map);
+                            locateMarker = L.circleMarker([lat, lng], { radius: 8, color: '#1a73e8', fillColor: '#1a73e8', fillOpacity: 1, weight: 2 }).addTo(map);
+                            map.flyTo([lat, lng], Math.max(map.getZoom(), 12));
+                        },
+                        function(err) {
+                            btn.style.opacity = '1';
+                            var msg = { 1: 'Location access denied.', 2: 'Location unavailable.', 3: 'Location request timed out.' };
+                            alert(msg[err.code] || 'Could not get location.');
+                        },
+                        { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                });
+                return btn;
+            }
+        });
+        new L.Control.Locate({ position: 'bottomright' }).addTo(map);
+
+        // --- Mobile bottom sheet ---
+        var sheetSelect = document.getElementById('sheetSelect');
+        var sheetLegend = document.getElementById('sheetLegend');
+        var bottomSheet = document.getElementById('bottomSheet');
+        var backdrop = document.getElementById('sheetBackdrop');
+
+        // Populate sheet select with same options as desktop
+        Object.keys(PADUS_SERVICES).forEach(function(name) {
+            var opt = document.createElement('option');
+            opt.value = PADUS_SERVICES[name];
+            opt.textContent = name;
+            sheetSelect.appendChild(opt);
+        });
+
+        function updateSheetLegend(serviceName) {
+            var cfg = PADUS_CONFIG[serviceName];
+            if (!cfg || !cfg.colors) { sheetLegend.innerHTML = ''; return; }
+            var html = '<b>' + cfg.styleField + '</b><br>';
+            Object.keys(cfg.colors).forEach(function(val) {
+                html += '<i style="background:' + cfg.colors[val] + '"></i>' + (cfg.labels[val] || val) + '<br>';
+            });
+            if (cfg.defaultLabel) {
+                html += '<i style="background:' + cfg.defaultColor + '"></i>' + cfg.defaultLabel;
+            }
+            sheetLegend.innerHTML = html;
+        }
+        updateSheetLegend('Manager_Name_PADUS');
+
+        sheetSelect.addEventListener('change', function() {
+            swapPadusLayer(sheetSelect.value);
+            updateSheetLegend(sheetSelect.value);
+        });
+
+        function openSheet() {
+            bottomSheet.classList.add('open');
+            backdrop.classList.add('open');
+        }
+        function closeSheet() {
+            bottomSheet.classList.remove('open');
+            backdrop.classList.remove('open');
+        }
+
+        document.getElementById('layersFab').addEventListener('click', openSheet);
+        document.getElementById('sheetClose').addEventListener('click', closeSheet);
+        backdrop.addEventListener('click', closeSheet);
     </script>
 </body>
 </html>
