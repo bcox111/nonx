@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
+    <style>
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        .padus-control {
+            background: white;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font: 12px/1.5 Arial, sans-serif;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+        }
+        .padus-control label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .padus-control select {
+            width: 200px;
+        }
+        .padus-legend {
+            background: white;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font: 12px/1.6 Arial, sans-serif;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .padus-legend b { display: block; margin-bottom: 2px; }
+        .padus-legend i {
+            display: inline-block;
+            width: 13px;
+            height: 13px;
+            margin-right: 5px;
+            vertical-align: middle;
+            border: 1px solid #666;
+            opacity: 0.85;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        var map = L.map('map').setView([46.0187, -91.47588], 4);
+
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd'
+        });
+
+        var cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd'
+        });
+
+        var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+
+        var esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+        });
+
+        var openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+            maxZoom: 17
+        });
+
+        var marker = L.marker([46.0187, -91.475880]).addTo(map);
+
+        var ZOOM_MIN = 7;    // show PADUS starting here
+        var ZOOM_COUNTY = 10; // show all features (including small) at county level
+
+        var padusEnabled = true;
+
+        var PADUS_BASE = 'https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/';
+
+        // Per-service symbology: which field to color by + color/label per value
+        var PADUS_CONFIG = {
+            'Manager_Name_PADUS': {
+                styleField: 'Mang_Name',
+                colors: {
+                    'BLM':  '#D4AC0D', 'USFS': '#2D6A4F', 'NPS':  '#52B788',
+                    'FWS':  '#74C69D', 'USBR': '#457B9D', 'BIA':  '#A0522D',
+                    'DOD':  '#6C757D', 'ARMY': '#4B5320', 'NAVY': '#000080',
+                    'USAF': '#4169E1', 'DOE':  '#E76F51', 'EPA':  '#00CED1'
+                },
+                labels: {
+                    'BLM':  'Bureau of Land Mgmt', 'USFS': 'US Forest Service',
+                    'NPS':  'National Park Service', 'FWS': 'Fish & Wildlife Service',
+                    'USBR': 'Bureau of Reclamation', 'BIA': 'Bureau of Indian Affairs',
+                    'DOD':  'Dept of Defense', 'ARMY': 'US Army',
+                    'NAVY': 'US Navy', 'USAF': 'US Air Force',
+                    'DOE':  'Dept of Energy', 'EPA': 'EPA'
+                },
+                defaultColor: '#ADB5BD', defaultLabel: 'Other'
+            },
+            'PADUS_Protection_Status_by_GAP_Status_Code': {
+                styleField: 'GAP_Sts',
+                colors: { '1': '#1A6400', '2': '#56A81D', '3': '#D6D600', '4': '#BBBBBB' },
+                labels: {
+                    '1': 'Status 1 – Biodiversity managed (disturbance allowed)',
+                    '2': 'Status 2 – Biodiversity managed (disturbance suppressed)',
+                    '3': 'Status 3 – Multiple use / extractive allowed',
+                    '4': 'Status 4 – No known protection mandate'
+                },
+                defaultColor: '#999999', defaultLabel: 'Unknown'
+            },
+            'PADUS_Public_Access': {
+                styleField: 'Access',
+                colors: { 'OA': '#4DAC26', 'RA': '#F1A340', 'XA': '#D7191C', 'UK': '#AAAAAA' },
+                labels: {
+                    'OA': 'Open Access', 'RA': 'Restricted Access',
+                    'XA': 'Closed – No Public Access', 'UK': 'Unknown'
+                },
+                defaultColor: '#AAAAAA', defaultLabel: 'Unknown'
+            },
+            'Fee_Managers_PADUS': {
+                styleField: 'Mang_Name',
+                colors: {
+                    'BLM':  '#D4AC0D', 'USFS': '#2D6A4F', 'NPS':  '#52B788',
+                    'FWS':  '#74C69D', 'USBR': '#457B9D', 'BIA':  '#A0522D',
+                    'DOD':  '#6C757D', 'ARMY': '#4B5320', 'NAVY': '#000080',
+                    'USAF': '#4169E1', 'DOE':  '#E76F51'
+                },
+                labels: {
+                    'BLM':  'Bureau of Land Mgmt', 'USFS': 'US Forest Service',
+                    'NPS':  'National Park Service', 'FWS': 'Fish & Wildlife Service',
+                    'USBR': 'Bureau of Reclamation', 'BIA': 'Bureau of Indian Affairs',
+                    'DOD':  'Dept of Defense', 'ARMY': 'US Army',
+                    'NAVY': 'US Navy', 'USAF': 'US Air Force', 'DOE': 'Dept of Energy'
+                },
+                defaultColor: '#ADB5BD', defaultLabel: 'Other'
+            },
+            'Manager_Type_PADUS': {
+                styleField: 'Mang_Type',
+                colors: {
+                    'FED':  '#2166AC', 'STAT': '#4DAC26', 'LOC':  '#FDAE61',
+                    'NGO':  '#9970AB', 'PVT':  '#F0F0F0', 'DIST': '#80CDC1',
+                    'JNT':  '#A6611A', 'UNK':  '#CCCCCC'
+                },
+                labels: {
+                    'FED':  'Federal', 'STAT': 'State', 'LOC':  'Local Government',
+                    'NGO':  'Non-Governmental Org', 'PVT':  'Private',
+                    'DIST': 'Special District', 'JNT':  'Joint', 'UNK':  'Unknown'
+                },
+                defaultColor: '#CCCCCC', defaultLabel: 'Unknown'
+            },
+            'Federal_Fee_Managers_Authoritative_PADUS': {
+                styleField: 'Mang_Name',
+                colors: {
+                    'BLM':  '#D4AC0D', 'USFS': '#2D6A4F', 'NPS':  '#52B788',
+                    'FWS':  '#74C69D', 'USBR': '#457B9D', 'BIA':  '#A0522D',
+                    'DOD':  '#6C757D', 'ARMY': '#4B5320', 'NAVY': '#000080',
+                    'USAF': '#4169E1', 'DOE':  '#E76F51', 'EPA':  '#00CED1'
+                },
+                labels: {
+                    'BLM':  'Bureau of Land Mgmt', 'USFS': 'US Forest Service',
+                    'NPS':  'National Park Service', 'FWS': 'Fish & Wildlife Service',
+                    'USBR': 'Bureau of Reclamation', 'BIA': 'Bureau of Indian Affairs',
+                    'DOD':  'Dept of Defense', 'ARMY': 'US Army',
+                    'NAVY': 'US Navy', 'USAF': 'US Air Force',
+                    'DOE':  'Dept of Energy', 'EPA':  'EPA'
+                },
+                defaultColor: '#ADB5BD', defaultLabel: 'Other Federal'
+            },
+            'Federal_Management_Agencies_PADUS': {
+                styleField: 'Mang_Name',
+                colors: {
+                    'BLM':  '#D4AC0D', 'USFS': '#2D6A4F', 'NPS':  '#52B788',
+                    'FWS':  '#74C69D', 'USBR': '#457B9D', 'BIA':  '#A0522D',
+                    'DOD':  '#6C757D', 'ARMY': '#4B5320', 'NAVY': '#000080',
+                    'USAF': '#4169E1', 'DOE':  '#E76F51', 'EPA':  '#00CED1'
+                },
+                labels: {
+                    'BLM':  'Bureau of Land Mgmt', 'USFS': 'US Forest Service',
+                    'NPS':  'National Park Service', 'FWS': 'Fish & Wildlife Service',
+                    'USBR': 'Bureau of Reclamation', 'BIA': 'Bureau of Indian Affairs',
+                    'DOD':  'Dept of Defense', 'ARMY': 'US Army',
+                    'NAVY': 'US Navy', 'USAF': 'US Air Force',
+                    'DOE':  'Dept of Energy', 'EPA':  'EPA'
+                },
+                defaultColor: '#ADB5BD', defaultLabel: 'Other Federal'
+            },
+            'Protection_Mechanism_Category_PADUS': {
+                styleField: 'Category',
+                colors: {
+                    'Fee':          '#2B83BA', 'Designation':  '#ABDDA4',
+                    'Easement':     '#FDAE61', 'Marine':       '#053061',
+                    'Proclamation': '#D7191C'
+                },
+                labels: {
+                    'Fee':          'Fee (Ownership)', 'Designation':  'Designation',
+                    'Easement':     'Conservation Easement', 'Marine': 'Marine',
+                    'Proclamation': 'Proclamation / Planning'
+                },
+                defaultColor: '#AAAAAA', defaultLabel: 'Other'
+            },
+            'Proclamation_and_Other_Planning_Boundaries_PADUS': {
+                styleField: 'Mang_Name',
+                colors: {
+                    'NPS':  '#52B788', 'FWS':  '#74C69D', 'USFS': '#2D6A4F',
+                    'DOD':  '#6C757D', 'BLM':  '#D4AC0D', 'USBR': '#457B9D'
+                },
+                labels: {
+                    'NPS':  'National Park Service', 'FWS': 'Fish & Wildlife Service',
+                    'USFS': 'US Forest Service', 'DOD': 'Dept of Defense',
+                    'BLM':  'Bureau of Land Mgmt', 'USBR': 'Bureau of Reclamation'
+                },
+                defaultColor: '#ADB5BD', defaultLabel: 'Other'
+            }
+        };
+
+        var PADUS_SERVICES = {
+            'Manager Name':               'Manager_Name_PADUS',
+            'Protection Status (GAP)':    'PADUS_Protection_Status_by_GAP_Status_Code',
+            'Public Access':              'PADUS_Public_Access',
+            'Fee Managers':               'Fee_Managers_PADUS',
+            'Manager Type':               'Manager_Type_PADUS',
+            'Federal Fee Managers':       'Federal_Fee_Managers_Authoritative_PADUS',
+            'Federal Management Agencies':'Federal_Management_Agencies_PADUS',
+            'Protection Mechanism':       'Protection_Mechanism_Category_PADUS',
+            'Proclamation Boundaries':    'Proclamation_and_Other_Planning_Boundaries_PADUS'
+        };
+
+        function createPadusLayer(serviceName) {
+            var cfg = PADUS_CONFIG[serviceName] || {};
+            var layer = L.esri.featureLayer({
+                url: PADUS_BASE + serviceName + '/FeatureServer/0',
+                renderer: L.canvas(),
+                simplifyFactor: 0.35,
+                precision: 5,
+                style: function(feature) {
+                    var val = cfg.styleField ? feature.properties[cfg.styleField] : null;
+                    var color = (cfg.colors && val && cfg.colors[val]) ? cfg.colors[val] : (cfg.defaultColor || '#888888');
+                    return { color: '#444', weight: 0.5, fillColor: color, fillOpacity: 0.65 };
+                }
+            });
+            layer.bindPopup(function(l) {
+                var p = l.feature.properties;
+                var rows = [];
+                if (p.Unit_Nm) rows.push('<b>' + p.Unit_Nm + '</b>');
+                Object.keys(p).forEach(function(k) {
+                    if (k !== 'Unit_Nm' && k !== 'OBJECTID' && p[k] != null && p[k] !== '') {
+                        rows.push(k + ': ' + p[k]);
+                    }
+                });
+                return rows.join('<br>') || 'No information available';
+            });
+            return layer;
+        }
+
+        var padusLayer = createPadusLayer('Manager_Name_PADUS');
+
+        function updatePadusLayer() {
+            var zoom = map.getZoom();
+
+            if (!padusEnabled || zoom < ZOOM_MIN) {
+                if (map.hasLayer(padusLayer)) map.removeLayer(padusLayer);
+                return;
+            }
+
+            if (!map.hasLayer(padusLayer)) padusLayer.addTo(map);
+
+            // At regional/state zoom: filter to federal and state lands only (larger features)
+            // At county zoom: show everything including small local features
+            if (zoom < ZOOM_COUNTY) {
+                padusLayer.setWhere("Mang_Type IN ('FED', 'STAT')");
+            } else {
+                padusLayer.setWhere("1=1");
+            }
+        }
+
+        map.on('zoomend', updatePadusLayer);
+
+        // Empty layer group acts as proxy in the layer control
+        var padusProxy = L.layerGroup().addTo(map);
+
+        map.on('overlayadd', function(e) {
+            if (e.layer === padusProxy) {
+                padusEnabled = true;
+                updatePadusLayer();
+            }
+        });
+
+        map.on('overlayremove', function(e) {
+            if (e.layer === padusProxy) {
+                padusEnabled = false;
+                if (map.hasLayer(padusLayer)) map.removeLayer(padusLayer);
+            }
+        });
+
+        L.control.layers(
+            {
+                'OpenStreetMap': osm,
+                'CartoDB Light': cartoLight,
+                'CartoDB Dark': cartoDark,
+                'ESRI Satellite': esriSatellite,
+                'ESRI Topo': esriTopo,
+                'OpenTopoMap': openTopo
+            },
+            { 'PADUS': padusProxy }
+        ).addTo(map);
+
+        var LegendControl = L.Control.extend({
+            onAdd: function() {
+                this._div = L.DomUtil.create('div', 'padus-legend');
+                return this._div;
+            },
+            update: function(serviceName) {
+                var cfg = PADUS_CONFIG[serviceName];
+                if (!cfg || !cfg.colors) { this._div.innerHTML = ''; return; }
+                var html = '<b>' + cfg.styleField + '</b><br>';
+                Object.keys(cfg.colors).forEach(function(val) {
+                    html += '<i style="background:' + cfg.colors[val] + '"></i>' + (cfg.labels[val] || val) + '<br>';
+                });
+                if (cfg.defaultLabel) {
+                    html += '<i style="background:' + cfg.defaultColor + '"></i>' + cfg.defaultLabel;
+                }
+                this._div.innerHTML = html;
+            }
+        });
+        var legend = new LegendControl({ position: 'bottomleft' }).addTo(map);
+        legend.update('Manager_Name_PADUS');
+
+        function swapPadusLayer(serviceName) {
+            if (map.hasLayer(padusLayer)) map.removeLayer(padusLayer);
+            padusLayer = createPadusLayer(serviceName);
+            legend.update(serviceName);
+            updatePadusLayer();
+        }
+
+        var PadusControl = L.Control.extend({
+            onAdd: function(map) {
+                var div = L.DomUtil.create('div', 'padus-control');
+                var label = L.DomUtil.create('label', '', div);
+                label.textContent = 'PAD-US Layer:';
+                var select = L.DomUtil.create('select', '', div);
+                Object.keys(PADUS_SERVICES).forEach(function(name) {
+                    var opt = L.DomUtil.create('option', '', select);
+                    opt.value = PADUS_SERVICES[name];
+                    opt.textContent = name;
+                });
+                L.DomEvent.disableClickPropagation(div);
+                L.DomEvent.on(select, 'change', function() {
+                    swapPadusLayer(select.value);
+                });
+                return div;
+            }
+        });
+        new PadusControl({ position: 'topright' }).addTo(map);
+
+        updatePadusLayer();
+    </script>
+</body>
+</html>
