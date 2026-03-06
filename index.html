@@ -161,20 +161,23 @@
             }
             #map { left: 0 !important; }
             #sidebarOpenBtn {
-                top: auto;
-                bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+                top: 10px;
+                bottom: auto;
                 left: 10px;
                 width: auto; height: auto;
                 padding: 10px 14px;
                 min-height: 44px;
                 font: bold 13px/1 Arial, sans-serif;
                 gap: 6px;
-                display: flex;
             }
             body:not(.sidebar-closed) #sidebarOpenBtn { display: none; }
             .leaflet-control-zoom a {
                 width: 44px !important; height: 44px !important;
                 line-height: 44px !important; font-size: 20px !important;
+            }
+            body:not(.sidebar-closed) .leaflet-control-zoom,
+            body:not(.sidebar-closed) .locate-btn {
+                display: none !important;
             }
         }
     </style>
@@ -203,14 +206,23 @@
         <div class="sidebar-section">
             <div class="sidebar-section-title">Layers</div>
             <label class="sidebar-layer-row">
-                <input type="checkbox" id="padusCheck" checked> PAD-US
+                <input type="checkbox" id="padusCheck"> PAD-US
             </label>
             <select id="padusSelect"></select>
+            <label class="sidebar-layer-row" style="margin-top:8px;">
+                <input type="checkbox" id="troutCheck"> Trout Streams (WI)
+            </label>
         </div>
 
         <div class="sidebar-section">
             <div class="sidebar-section-title">Legend</div>
             <div id="sidebarLegend"></div>
+            <div id="troutLegend" style="display:none; margin-top:8px;">
+                <span class="legend-field">TROUT_CLASS_CODE</span>
+                <div><i style="background:#1a6faf"></i>Class I</div>
+                <div><i style="background:#4dac26"></i>Class II</div>
+                <div><i style="background:#f1a340"></i>Class III</div>
+            </div>
         </div>
     </div>
 
@@ -249,6 +261,13 @@
             attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
         }, TILE_OPTS));
 
+        var esriHybrid = L.layerGroup([
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', Object.assign({
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            }, TILE_OPTS)),
+            L.tileLayer('https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', TILE_OPTS)
+        ]);
+
         var esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', Object.assign({
             attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
         }, TILE_OPTS));
@@ -263,6 +282,7 @@
             'CartoDB Light': cartoLight,
             'CartoDB Dark': cartoDark,
             'ESRI Satellite': esriSatellite,
+            'ESRI Hybrid': esriHybrid,
             'ESRI Topo': esriTopo,
             'OpenTopoMap': openTopo
         };
@@ -292,7 +312,7 @@
         var ZOOM_MIN = 7;
         var ZOOM_COUNTY = 10;
 
-        var padusEnabled = true;
+        var padusEnabled = false;
 
         var PADUS_BASE = 'https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/';
 
@@ -531,8 +551,73 @@
             updatePadusLayer();
         });
 
+        padusSelect.disabled = true;
         updatePadusLayer();
         updateLegend('Manager_Name_PADUS');
+
+        // --- Trout Streams layer ---
+        var troutData = null;
+        var troutLayer = null;
+        var troutEnabled = false;
+
+        var TROUT_COLORS = {
+            'CLASS I':   '#1a6faf',
+            'CLASS II':  '#4dac26',
+            'CLASS III': '#f1a340'
+        };
+
+        function buildTroutLayer(data) {
+            return L.geoJSON(data, {
+                renderer: L.canvas(),
+                style: function(feature) {
+                    var cls = feature.properties.TROUT_CLASS_CODE;
+                    return { color: TROUT_COLORS[cls] || '#888888', weight: 1.5, opacity: 0.85 };
+                },
+                onEachFeature: function(feature, layer) {
+                    var p = feature.properties;
+                    var html = '<b>' + (p.OFFICIAL_NAME || 'Unnamed') + '</b><br>'
+                        + 'Class: ' + (p.TROUT_CLASS_CODE || '—') + '<br>'
+                        + 'Type: ' + (p.WATER_TYPE || '—');
+                    if (p.IMPAIRED_WATER_LISTED_FLAG === 'Y') html += '<br><span style="color:#c0392b">&#9888; Impaired water</span>';
+                    if (p.ORW_ERW) html += '<br>ORW/ERW: ' + p.ORW_ERW;
+                    layer.bindPopup(html, { maxWidth: 260 });
+                }
+            });
+        }
+
+        function updateTroutLayer() {
+            var zoom = map.getZoom();
+            if (!troutEnabled || zoom < ZOOM_MIN) {
+                if (troutLayer && map.hasLayer(troutLayer)) map.removeLayer(troutLayer);
+                return;
+            }
+            if (troutLayer) {
+                if (!map.hasLayer(troutLayer)) troutLayer.addTo(map);
+                return;
+            }
+            if (troutData) {
+                troutLayer = buildTroutLayer(troutData);
+                troutLayer.addTo(map);
+                return;
+            }
+            fetch('data/trout_streams.geojson')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    troutData = data;
+                    if (troutEnabled && map.getZoom() >= ZOOM_MIN) {
+                        troutLayer = buildTroutLayer(troutData);
+                        troutLayer.addTo(map);
+                    }
+                });
+        }
+
+        document.getElementById('troutCheck').addEventListener('change', function() {
+            troutEnabled = this.checked;
+            document.getElementById('troutLegend').style.display = troutEnabled ? 'block' : 'none';
+            updateTroutLayer();
+        });
+
+        map.on('zoomend', updateTroutLayer);
 
         // --- GPS "Find Me" control ---
         var locateMarker = null;
@@ -658,6 +743,12 @@
             document.body.classList.remove('sidebar-closed');
             map.invalidateSize();
         });
+
+        // Close sidebar by default on mobile
+        if (window.innerWidth <= 768) {
+            sidebar.classList.remove('open');
+            document.body.classList.add('sidebar-closed');
+        }
     </script>
 </body>
 </html>
