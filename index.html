@@ -17,7 +17,7 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            left: 0;
+            left: 280px;
             right: 0;
         }
         /* Remove blue tap flash on mobile */
@@ -29,42 +29,6 @@
         .leaflet-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
         .leaflet-left { padding-left: env(safe-area-inset-left, 0); }
         .leaflet-right { padding-right: env(safe-area-inset-right, 0); }
-
-        /* --- Desktop controls --- */
-        .padus-control {
-            background: white;
-            padding: 6px 8px;
-            border-radius: 4px;
-            font: 12px/1.5 Arial, sans-serif;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-        }
-        .padus-control label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 2px;
-        }
-        .padus-control select {
-            width: 200px;
-        }
-        .padus-legend {
-            background: white;
-            padding: 6px 8px;
-            border-radius: 4px;
-            font: 12px/1.6 Arial, sans-serif;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .padus-legend b { display: block; margin-bottom: 2px; }
-        .padus-legend i {
-            display: inline-block;
-            width: 13px;
-            height: 13px;
-            margin-right: 5px;
-            vertical-align: middle;
-            border: 1px solid #666;
-            opacity: 0.85;
-        }
 
         /* --- Locate (Find Me) button --- */
         .locate-btn {
@@ -86,126 +50,183 @@
         .locate-btn:hover { background: #f4f4f4; }
         .locate-btn:active { background: #e8e8e8; }
 
-        /* --- Mobile bottom sheet --- */
-        .layers-fab {
-            display: none; /* shown via media query */
+        /* --- Sidebar --- */
+        #sidebar {
             position: fixed;
-            bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-            left: 10px;
+            top: 0; left: 0; bottom: 0;
+            width: 280px;
             z-index: 1000;
             background: white;
-            border: none;
-            border-radius: 4px;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-            cursor: pointer;
-            font: bold 13px/1 Arial, sans-serif;
-            padding: 10px 14px;
-            min-height: 44px;
-            touch-action: manipulation;
-        }
-        .bottom-sheet {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 2000;
-            background: white;
-            border-radius: 16px 16px 0 0;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
-            padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-            max-height: 60vh;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.2);
             overflow-y: auto;
-            font: 14px/1.6 Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            font: 13px/1.5 Arial, sans-serif;
         }
-        .bottom-sheet.open { display: block; }
-        .bottom-sheet-header {
+        #sidebar:not(.open) {
+            display: none;
+        }
+        body.sidebar-closed #map {
+            left: 0;
+        }
+        .sidebar-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
+            padding: 12px 12px 8px;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 1;
         }
-        .bottom-sheet-header b { font-size: 15px; }
-        .bottom-sheet-close {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 22px;
-            line-height: 1;
-            padding: 4px 8px;
-            min-width: 44px;
-            min-height: 44px;
+        .sidebar-title { font-weight: bold; font-size: 14px; }
+        .sidebar-close-btn {
+            background: none; border: none; cursor: pointer;
+            font-size: 20px; line-height: 1; padding: 4px 6px;
+            color: #555; min-width: 32px; min-height: 32px;
+        }
+        .sidebar-section {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .sidebar-section-title {
+            font-weight: bold; font-size: 11px; text-transform: uppercase;
+            color: #888; letter-spacing: 0.5px; margin-bottom: 8px;
+        }
+        .basemap-label {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 0; cursor: pointer;
+        }
+        .sidebar-layer-row {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 0; cursor: pointer; margin-bottom: 8px;
+        }
+        #padusSelect {
+            width: 100%; font-size: 13px; padding: 5px 6px;
+            border: 1px solid #ccc; border-radius: 4px;
+        }
+        #sidebarLegend i {
+            display: inline-block; width: 13px; height: 13px;
+            margin-right: 5px; vertical-align: middle;
+            border: 1px solid #666; opacity: 0.85;
+        }
+        #sidebarLegend .legend-field {
+            display: block; font-size: 11px; color: #555;
+            margin-bottom: 4px; font-weight: bold;
+        }
+
+        /* --- Search --- */
+        .search-row {
+            display: flex; gap: 6px; margin-bottom: 4px;
+        }
+        #searchInput {
+            flex: 1; font-size: 13px; padding: 5px 8px;
+            border: 1px solid #ccc; border-radius: 4px;
+            min-width: 0;
+        }
+        #searchBtn {
+            background: white; border: 1px solid #ccc; border-radius: 4px;
+            cursor: pointer; padding: 5px 9px; font-size: 15px;
+            flex-shrink: 0; line-height: 1;
+        }
+        #searchBtn:hover { background: #f4f4f4; }
+        #searchResults { font-size: 12px; color: #333; }
+        .search-result-item {
+            padding: 5px 4px; cursor: pointer; border-radius: 3px; line-height: 1.3;
+        }
+        .search-result-item:hover { background: #f0f0f0; }
+        .search-no-results { color: #888; font-style: italic; padding: 4px; }
+
+        /* --- Sidebar open button --- */
+        #sidebarOpenBtn {
+            display: none;
+            position: fixed; top: 10px; left: 10px; z-index: 1001;
+            background: white; border: none; border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            cursor: pointer; font: bold 13px/1 Arial, sans-serif;
+            padding: 10px 14px; min-height: 44px; gap: 6px;
+            align-items: center; justify-content: center;
             touch-action: manipulation;
         }
-        .bottom-sheet select {
-            width: 100%;
-            font-size: 16px; /* prevents iOS auto-zoom */
-            padding: 8px;
-            margin-bottom: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .sheet-legend i {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            margin-right: 6px;
-            vertical-align: middle;
-            border: 1px solid #666;
-            opacity: 0.85;
-        }
-        .sheet-legend b { display: block; margin-bottom: 4px; font-size: 13px; color: #555; }
-        /* Dim overlay behind sheet */
-        .sheet-backdrop {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 1999;
-            background: rgba(0,0,0,0.35);
-        }
-        .sheet-backdrop.open { display: block; }
+        body.sidebar-closed #sidebarOpenBtn { display: flex; }
 
-        /* --- Mobile overrides --- */
+        /* --- Mobile --- */
         @media (max-width: 768px) {
-            /* Hide desktop PADUS controls on mobile */
-            .padus-control,
-            .padus-legend { display: none !important; }
-            /* Show FAB */
-            .layers-fab { display: flex; align-items: center; gap: 6px; }
-            /* Larger leaflet control buttons */
-            .leaflet-control-zoom a,
-            .leaflet-control-layers-toggle {
-                width: 44px !important;
-                height: 44px !important;
-                line-height: 44px !important;
-                font-size: 20px !important;
+            #searchInput { font-size: 16px; }
+            #sidebar {
+                width: 100%;
+                right: 0;
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+            }
+            #map { left: 0 !important; }
+            #sidebarOpenBtn {
+                top: auto;
+                bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+                left: 10px;
+                width: auto; height: auto;
+                padding: 10px 14px;
+                min-height: 44px;
+                font: bold 13px/1 Arial, sans-serif;
+                gap: 6px;
+                display: flex;
+            }
+            body:not(.sidebar-closed) #sidebarOpenBtn { display: none; }
+            .leaflet-control-zoom a {
+                width: 44px !important; height: 44px !important;
+                line-height: 44px !important; font-size: 20px !important;
             }
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-
-    <!-- Mobile: floating layers button + bottom sheet -->
-    <button class="layers-fab" id="layersFab">
-        <span>&#9776;</span> Layers
-    </button>
-    <div class="sheet-backdrop" id="sheetBackdrop"></div>
-    <div class="bottom-sheet" id="bottomSheet">
-        <div class="bottom-sheet-header">
-            <b>PAD-US Layer</b>
-            <button class="bottom-sheet-close" id="sheetClose">&#215;</button>
+    <div id="sidebar" class="open">
+        <div class="sidebar-header">
+            <span class="sidebar-title">Layers</span>
+            <button id="sidebarCloseBtn" class="sidebar-close-btn" aria-label="Close sidebar">&#215;</button>
         </div>
-        <select id="sheetSelect"></select>
-        <div class="sheet-legend" id="sheetLegend"></div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Search</div>
+            <div class="search-row">
+                <input type="search" id="searchInput" placeholder="City, address, or lat, lng&hellip;" autocomplete="off" />
+                <button id="searchBtn" aria-label="Search">&#128269;</button>
+            </div>
+            <div id="searchResults"></div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Basemap</div>
+            <div id="basemapList"></div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Layers</div>
+            <label class="sidebar-layer-row">
+                <input type="checkbox" id="padusCheck" checked> PAD-US
+            </label>
+            <select id="padusSelect"></select>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Legend</div>
+            <div id="sidebarLegend"></div>
+        </div>
     </div>
+
+    <button id="sidebarOpenBtn" aria-label="Open layers panel">&#9776; Layers</button>
+
+    <div id="map"></div>
 
     <script>
         var map = L.map('map', {
             tap: true,
             tapTolerance: 15,
-            bounceAtZoomLimits: false
+            bounceAtZoomLimits: false,
+            zoomControl: false
         }).setView([46.0187, -91.47588], 4);
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
 
         var TILE_OPTS = { keepBuffer: 2, updateWhenZooming: false };
 
@@ -237,14 +258,44 @@
             maxZoom: 17
         }, TILE_OPTS));
 
-        var ZOOM_MIN = 7;    // show PADUS starting here
-        var ZOOM_COUNTY = 10; // show all features (including small) at county level
+        var BASEMAPS = {
+            'OpenStreetMap': osm,
+            'CartoDB Light': cartoLight,
+            'CartoDB Dark': cartoDark,
+            'ESRI Satellite': esriSatellite,
+            'ESRI Topo': esriTopo,
+            'OpenTopoMap': openTopo
+        };
+        var currentBasemap = osm;
+
+        // Build basemap radio buttons
+        var basemapList = document.getElementById('basemapList');
+        Object.keys(BASEMAPS).forEach(function(name) {
+            var lbl = document.createElement('label');
+            lbl.className = 'basemap-label';
+            var radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'basemap';
+            radio.value = name;
+            if (BASEMAPS[name] === currentBasemap) radio.checked = true;
+            radio.addEventListener('change', function() {
+                if (map.hasLayer(currentBasemap)) map.removeLayer(currentBasemap);
+                currentBasemap = BASEMAPS[name];
+                currentBasemap.addTo(map);
+                currentBasemap.bringToBack();
+            });
+            lbl.appendChild(radio);
+            lbl.appendChild(document.createTextNode(name));
+            basemapList.appendChild(lbl);
+        });
+
+        var ZOOM_MIN = 7;
+        var ZOOM_COUNTY = 10;
 
         var padusEnabled = true;
 
         var PADUS_BASE = 'https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/';
 
-        // Per-service symbology: which field to color by + color/label per value
         var PADUS_CONFIG = {
             'Manager_Name_PADUS': {
                 styleField: 'Mang_Name',
@@ -431,8 +482,6 @@
 
             if (!map.hasLayer(padusLayer)) padusLayer.addTo(map);
 
-            // At regional/state zoom: filter to federal and state lands only (larger features)
-            // At county zoom: show everything including small local features
             if (zoom < ZOOM_COUNTY) {
                 padusLayer.setWhere("Mang_Type IN ('FED', 'STAT')");
             } else {
@@ -442,84 +491,48 @@
 
         map.on('zoomend', updatePadusLayer);
 
-        // Empty layer group acts as proxy in the layer control
-        var padusProxy = L.layerGroup().addTo(map);
-
-        map.on('overlayadd', function(e) {
-            if (e.layer === padusProxy) {
-                padusEnabled = true;
-                updatePadusLayer();
-            }
-        });
-
-        map.on('overlayremove', function(e) {
-            if (e.layer === padusProxy) {
-                padusEnabled = false;
-                if (map.hasLayer(padusLayer)) map.removeLayer(padusLayer);
-            }
-        });
-
-        L.control.layers(
-            {
-                'OpenStreetMap': osm,
-                'CartoDB Light': cartoLight,
-                'CartoDB Dark': cartoDark,
-                'ESRI Satellite': esriSatellite,
-                'ESRI Topo': esriTopo,
-                'OpenTopoMap': openTopo
-            },
-            { 'PADUS': padusProxy }
-        ).addTo(map);
-
-        var LegendControl = L.Control.extend({
-            onAdd: function() {
-                this._div = L.DomUtil.create('div', 'padus-legend');
-                return this._div;
-            },
-            update: function(serviceName) {
-                var cfg = PADUS_CONFIG[serviceName];
-                if (!cfg || !cfg.colors) { this._div.innerHTML = ''; return; }
-                var html = '<b>' + cfg.styleField + '</b><br>';
-                Object.keys(cfg.colors).forEach(function(val) {
-                    html += '<i style="background:' + cfg.colors[val] + '"></i>' + (cfg.labels[val] || val) + '<br>';
-                });
-                if (cfg.defaultLabel) {
-                    html += '<i style="background:' + cfg.defaultColor + '"></i>' + cfg.defaultLabel;
-                }
-                this._div.innerHTML = html;
-            }
-        });
-        var legend = new LegendControl({ position: 'bottomleft' }).addTo(map);
-        legend.update('Manager_Name_PADUS');
-
         function swapPadusLayer(serviceName) {
             if (map.hasLayer(padusLayer)) map.removeLayer(padusLayer);
             padusLayer = createPadusLayer(serviceName);
-            legend.update(serviceName);
+            updateLegend(serviceName);
             updatePadusLayer();
         }
 
-        var PadusControl = L.Control.extend({
-            onAdd: function(map) {
-                var div = L.DomUtil.create('div', 'padus-control');
-                var label = L.DomUtil.create('label', '', div);
-                label.textContent = 'PAD-US Layer:';
-                var select = L.DomUtil.create('select', '', div);
-                Object.keys(PADUS_SERVICES).forEach(function(name) {
-                    var opt = L.DomUtil.create('option', '', select);
-                    opt.value = PADUS_SERVICES[name];
-                    opt.textContent = name;
-                });
-                L.DomEvent.disableClickPropagation(div);
-                L.DomEvent.on(select, 'change', function() {
-                    swapPadusLayer(select.value);
-                });
-                return div;
+        function updateLegend(serviceName) {
+            var cfg = PADUS_CONFIG[serviceName];
+            var el = document.getElementById('sidebarLegend');
+            if (!cfg || !cfg.colors) { el.innerHTML = ''; return; }
+            var html = '<span class="legend-field">' + cfg.styleField + '</span>';
+            Object.keys(cfg.colors).forEach(function(val) {
+                html += '<div><i style="background:' + cfg.colors[val] + '"></i>' + (cfg.labels[val] || val) + '</div>';
+            });
+            if (cfg.defaultLabel) {
+                html += '<div><i style="background:' + cfg.defaultColor + '"></i>' + cfg.defaultLabel + '</div>';
             }
+            el.innerHTML = html;
+        }
+
+        // Populate PAD-US select
+        var padusSelect = document.getElementById('padusSelect');
+        Object.keys(PADUS_SERVICES).forEach(function(name) {
+            var opt = document.createElement('option');
+            opt.value = PADUS_SERVICES[name];
+            opt.textContent = name;
+            padusSelect.appendChild(opt);
         });
-        new PadusControl({ position: 'topright' }).addTo(map);
+
+        padusSelect.addEventListener('change', function() {
+            swapPadusLayer(padusSelect.value);
+        });
+
+        document.getElementById('padusCheck').addEventListener('change', function() {
+            padusEnabled = this.checked;
+            padusSelect.disabled = !padusEnabled;
+            updatePadusLayer();
+        });
 
         updatePadusLayer();
+        updateLegend('Manager_Name_PADUS');
 
         // --- GPS "Find Me" control ---
         var locateMarker = null;
@@ -563,51 +576,88 @@
         });
         new L.Control.Locate({ position: 'bottomright' }).addTo(map);
 
-        // --- Mobile bottom sheet ---
-        var sheetSelect = document.getElementById('sheetSelect');
-        var sheetLegend = document.getElementById('sheetLegend');
-        var bottomSheet = document.getElementById('bottomSheet');
-        var backdrop = document.getElementById('sheetBackdrop');
+        // --- Location search ---
+        var searchMarker = null;
+        var latLngRe = /^\s*(-?\d+\.?\d*)\s*[,\s]+\s*(-?\d+\.?\d*)\s*$/;
 
-        // Populate sheet select with same options as desktop
-        Object.keys(PADUS_SERVICES).forEach(function(name) {
-            var opt = document.createElement('option');
-            opt.value = PADUS_SERVICES[name];
-            opt.textContent = name;
-            sheetSelect.appendChild(opt);
-        });
+        function flyToLatLng(lat, lng, zoom) {
+            if (searchMarker) map.removeLayer(searchMarker);
+            searchMarker = L.marker([lat, lng]).addTo(map);
+            map.flyTo([lat, lng], zoom || 13);
+        }
 
-        function updateSheetLegend(serviceName) {
-            var cfg = PADUS_CONFIG[serviceName];
-            if (!cfg || !cfg.colors) { sheetLegend.innerHTML = ''; return; }
-            var html = '<b>' + cfg.styleField + '</b><br>';
-            Object.keys(cfg.colors).forEach(function(val) {
-                html += '<i style="background:' + cfg.colors[val] + '"></i>' + (cfg.labels[val] || val) + '<br>';
-            });
-            if (cfg.defaultLabel) {
-                html += '<i style="background:' + cfg.defaultColor + '"></i>' + cfg.defaultLabel;
+        function showSearchResults(results) {
+            var el = document.getElementById('searchResults');
+            if (!results.length) {
+                el.innerHTML = '<div class="search-no-results">No results found.</div>';
+                return;
             }
-            sheetLegend.innerHTML = html;
+            if (results.length === 1) {
+                el.innerHTML = '';
+                flyToLatLng(parseFloat(results[0].lat), parseFloat(results[0].lon));
+                return;
+            }
+            el.innerHTML = '';
+            results.forEach(function(r) {
+                var item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.textContent = r.display_name;
+                item.addEventListener('click', function() {
+                    el.innerHTML = '';
+                    flyToLatLng(parseFloat(r.lat), parseFloat(r.lon));
+                });
+                el.appendChild(item);
+            });
         }
-        updateSheetLegend('Manager_Name_PADUS');
 
-        sheetSelect.addEventListener('change', function() {
-            swapPadusLayer(sheetSelect.value);
-            updateSheetLegend(sheetSelect.value);
+        function doSearch() {
+            var q = document.getElementById('searchInput').value.trim();
+            if (!q) return;
+
+            var el = document.getElementById('searchResults');
+            el.innerHTML = '';
+
+            // Try lat/lng first
+            var m = latLngRe.exec(q);
+            if (m) {
+                flyToLatLng(parseFloat(m[1]), parseFloat(m[2]));
+                return;
+            }
+
+            // Nominatim geocode
+            var btn = document.getElementById('searchBtn');
+            btn.disabled = true;
+            fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' + encodeURIComponent(q))
+                .then(function(r) { return r.json(); })
+                .then(function(data) { showSearchResults(data); })
+                .catch(function() {
+                    el.innerHTML = '<div class="search-no-results">Search failed. Check your connection.</div>';
+                })
+                .finally(function() { btn.disabled = false; });
+        }
+
+        document.getElementById('searchBtn').addEventListener('click', doSearch);
+        document.getElementById('searchInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') doSearch();
+        });
+        map.on('click', function() {
+            document.getElementById('searchResults').innerHTML = '';
         });
 
-        function openSheet() {
-            bottomSheet.classList.add('open');
-            backdrop.classList.add('open');
-        }
-        function closeSheet() {
-            bottomSheet.classList.remove('open');
-            backdrop.classList.remove('open');
-        }
+        // --- Sidebar open/close ---
+        var sidebar = document.getElementById('sidebar');
 
-        document.getElementById('layersFab').addEventListener('click', openSheet);
-        document.getElementById('sheetClose').addEventListener('click', closeSheet);
-        backdrop.addEventListener('click', closeSheet);
+        document.getElementById('sidebarCloseBtn').addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            document.body.classList.add('sidebar-closed');
+            map.invalidateSize();
+        });
+
+        document.getElementById('sidebarOpenBtn').addEventListener('click', function() {
+            sidebar.classList.add('open');
+            document.body.classList.remove('sidebar-closed');
+            map.invalidateSize();
+        });
     </script>
 </body>
 </html>
